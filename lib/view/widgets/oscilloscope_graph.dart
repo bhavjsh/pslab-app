@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:pslab/providers/oscilloscope_state_provider.dart';
 import 'package:pslab/view/widgets/xyplot_graph.dart';
@@ -46,16 +47,22 @@ class _OscilloscopeGraphState extends State<OscilloscopeGraph> {
 
   @override
   Widget build(BuildContext context) {
-    OscilloscopeStateProvider oscilloscopeStateProvider =
-        Provider.of<OscilloscopeStateProvider>(context);
     return Consumer<OscilloscopeStateProvider>(
       builder: (context, provider, _) {
-        if (oscilloscopeStateProvider.isXYPlotSelected) {
-          return const SizedBox(
-            child: XYPlotGraph(),
-          );
-        } else {
-          return SizedBox(
+        if (provider.isXYPlotSelected) {
+          // IMPORTANT: XYPlotGraph will handle scroll itself now
+          return const SizedBox(child: XYPlotGraph());
+        }
+
+        return SizedBox(
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerSignal: (pointerSignal) {
+              if (pointerSignal is PointerScrollEvent) {
+                final bool zoomIn = pointerSignal.scrollDelta.dy < 0;
+                provider.zoomX(zoomIn: zoomIn);
+              }
+            },
             child: LineChart(
               LineChartData(
                 backgroundColor: chartBackgroundColor,
@@ -63,9 +70,7 @@ class _OscilloscopeGraphState extends State<OscilloscopeGraph> {
                   show: true,
                   topTitles: AxisTitles(
                     axisNameWidget: Text(
-                      oscilloscopeStateProvider
-                                  .oscilloscopeAxesScale.xAxisScale ==
-                              875
+                      provider.oscilloscopeAxesScale.xAxisScale == 875
                           ? 'Time (\u00b5s)'
                           : 'Time (ms)',
                       style: TextStyle(
@@ -76,15 +81,16 @@ class _OscilloscopeGraphState extends State<OscilloscopeGraph> {
                     ),
                     sideTitles: SideTitles(
                       maxIncluded: false,
-                      interval: oscilloscopeStateProvider.oscilloscopeAxesScale
-                          .getTimebaseInterval(),
+                      interval:
+                          provider.oscilloscopeAxesScale.getTimebaseInterval(),
                       reservedSize: 20,
                       showTitles: true,
                       getTitlesWidget: topTitleWidgets,
                     ),
                   ),
                   bottomTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   leftTitles: AxisTitles(
                     axisNameWidget: Text(
                       'CH1 (V)',
@@ -126,55 +132,38 @@ class _OscilloscopeGraphState extends State<OscilloscopeGraph> {
                   drawVerticalLine: true,
                   horizontalInterval:
                       provider.oscilloscopeAxesScale.yAxisScaleMax / 4,
-                  verticalInterval: oscilloscopeStateProvider
-                      .oscilloscopeAxesScale
-                      .getTimebaseInterval(),
-                  getDrawingHorizontalLine: (value) {
-                    return const FlLine(
-                      color: Color.fromARGB(50, 255, 255, 255),
-                      strokeWidth: 1,
-                    );
-                  },
-                  getDrawingVerticalLine: (value) {
-                    return const FlLine(
-                      color: Color.fromARGB(50, 255, 255, 255),
-                      strokeWidth: 1,
-                    );
-                  },
+                  verticalInterval:
+                      provider.oscilloscopeAxesScale.getTimebaseInterval(),
+                  getDrawingHorizontalLine: (value) => const FlLine(
+                    color: Color.fromARGB(50, 255, 255, 255),
+                    strokeWidth: 1,
+                  ),
+                  getDrawingVerticalLine: (value) => const FlLine(
+                    color: Color.fromARGB(50, 255, 255, 255),
+                    strokeWidth: 1,
+                  ),
                 ),
                 borderData: FlBorderData(
                   show: true,
                   border: Border(
-                    bottom: BorderSide(
-                      color: chartBorderColor,
-                    ),
-                    left: BorderSide(
-                      color: chartBorderColor,
-                    ),
-                    top: BorderSide(
-                      color: chartBorderColor,
-                    ),
-                    right: BorderSide(
-                      color: chartBorderColor,
-                    ),
+                    bottom: BorderSide(color: chartBorderColor),
+                    left: BorderSide(color: chartBorderColor),
+                    top: BorderSide(color: chartBorderColor),
+                    right: BorderSide(color: chartBorderColor),
                   ),
                 ),
                 maxY: provider.oscilloscopeAxesScale.yAxisScaleMax,
                 minY: provider.oscilloscopeAxesScale.yAxisScaleMin,
-                maxX: oscilloscopeStateProvider
-                            .oscilloscopeAxesScale.xAxisScale ==
-                        875
-                    ? oscilloscopeStateProvider.oscilloscopeAxesScale.xAxisScale
-                    : oscilloscopeStateProvider
-                            .oscilloscopeAxesScale.xAxisScale /
-                        1000,
+                maxX: provider.oscilloscopeAxesScale.xAxisScale == 875
+                    ? provider.oscilloscopeAxesScale.xAxisScale
+                    : provider.oscilloscopeAxesScale.xAxisScale / 1000,
                 minX: 0,
                 clipData: const FlClipData.all(),
-                lineBarsData: oscilloscopeStateProvider.createPlots(),
+                lineBarsData: provider.createPlots(),
               ),
             ),
-          );
-        }
+          ),
+        );
       },
     );
   }

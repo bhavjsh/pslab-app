@@ -51,7 +51,9 @@ class OscilloscopeStateProvider extends ChangeNotifier {
   late int samples;
   late double timeGap;
   late double timebase;
-  double maxTimebase = 102.4;
+  static const double _minTimebaseUs = 875.0;
+  static const double _maxTimebaseUs = 102400.0;
+  static const double _maxTimebaseMs = 102.4;
   late bool isCH1Selected;
   late bool isCH2Selected;
   late bool isCH3Selected;
@@ -919,6 +921,36 @@ class OscilloscopeStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  static const double _zoomInFactor = 0.9;
+  static const double _zoomOutFactor = 1.1;
+
+  void zoomX({required bool zoomIn}) {
+    final factor = zoomIn ? _zoomInFactor : _zoomOutFactor;
+
+    timebase = (timebase * factor).clamp(_minTimebaseUs, _maxTimebaseUs);
+    oscilloscopeAxesScale.setXAxisScale(timebase);
+
+    samples = 512;
+
+
+    timeGap = (2 * timebase) / samples;
+
+    notifyListeners();
+  }
+
+  void zoomY({required bool zoomIn}) {
+    final factor = zoomIn ? _zoomInFactor : _zoomOutFactor;
+
+    final double current = oscilloscopeAxesScale.yAxisScale;
+    final double newScale = (current * factor).clamp(0.1, 50.0);
+
+    oscilloscopeAxesScale.setYAxisScale(newScale);
+    oscilloscopeAxesScale.setYAxisScaleMax(newScale);
+    oscilloscopeAxesScale.setYAxisScaleMin(-newScale);
+
+    notifyListeners();
+  }
+
   bool autoScale() {
     double minY = double.maxFinite;
     double maxY = double.minPositive;
@@ -958,7 +990,7 @@ class OscilloscopeStateProvider extends ChangeNotifier {
     yRange = maxY - minY;
     yPadding = yRange * 0.1;
     if (maxPeriod > 0) {
-      double xAxisScale = min((maxPeriod * 5), maxTimebase);
+      double xAxisScale = min((maxPeriod * 5), _maxTimebaseMs);
       double yAxisScale;
       if (maxY.abs() > minY.abs()) {
         yAxisScale = maxY + yPadding;
