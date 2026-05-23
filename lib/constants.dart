@@ -10,7 +10,7 @@ const multimeterScreenTitleKey = 'multimeter_screen_title';
 const waveGeneratorScreenTitleKey = 'wave_generator_screen_title';
 const oscilloscopeScreenTitleKey = 'oscilloscope_screen_title';
 
-AppLocalizations appLocalizations = getIt.get<AppLocalizations>();
+AppLocalizations get appLocalizations => getIt.get<AppLocalizations>();
 
 List<String> instrumentIcons = [
   'assets/icons/tile_icon_oscilloscope.png',
